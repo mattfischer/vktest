@@ -20,10 +20,27 @@ void loadShader(const char *filename, VkShaderModuleCreateInfo *createInfo)
     fclose(f);
 }
 
+VkInstance inst;
+int32_t graphicsIndex = -1;
+VkPhysicalDevice physicalDevice;
+VkDevice device;
+VkQueue queue;
+VkCommandBuffer commandBuffer;
+VkCommandPool commandPool;
+VkShaderModule vertShaderModule;
+VkShaderModule fragShaderModule;
+VkRenderPass renderPass;
+VkPipelineLayout pipelineLayout;
+VkPipeline pipeline;
+VkSurfaceKHR surface;
+VkSwapchainKHR swapchain;
+VkSemaphore imageAvailableSemaphore;
+VkSemaphore renderFinishedSemaphore;
+std::vector<VkImage> swapchainImages;
+std::vector<VkFramebuffer> framebuffers;
+
 void initVulkan(HINSTANCE hInstance, HWND hWnd)
-{
-    VkInstance inst;
-    
+{   
     const char *instExtensions[] = {
         "VK_KHR_surface",
         "VK_KHR_win32_surface"
@@ -39,7 +56,6 @@ void initVulkan(HINSTANCE hInstance, HWND hWnd)
     printf("create instance: %i\n", result);
 
     uint32_t numPhysicalDevices = 1;
-    VkPhysicalDevice physicalDevice;
     result = vkEnumeratePhysicalDevices(inst, &numPhysicalDevices, &physicalDevice);
 
     uint32_t queueFamilyPropertyCount;
@@ -49,7 +65,6 @@ void initVulkan(HINSTANCE hInstance, HWND hWnd)
     std::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyPropertyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyPropertyCount, &queueFamilyProperties[0]);
     
-    int32_t graphicsIndex = -1;
     for(int32_t i=0; i<queueFamilyPropertyCount; i++) {
         if(queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             graphicsIndex = i;
@@ -74,11 +89,9 @@ void initVulkan(HINSTANCE hInstance, HWND hWnd)
     deviceCreateInfo.enabledExtensionCount = 1;
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions;
 
-    VkDevice device;
     result = vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device);
     printf("Create device: %i\n", result);
 
-    VkQueue queue;
     vkGetDeviceQueue(device, graphicsIndex, 0, &queue);
 
     VkCommandPoolCreateInfo commandPoolCreateInfo{};
@@ -86,7 +99,6 @@ void initVulkan(HINSTANCE hInstance, HWND hWnd)
     commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     commandPoolCreateInfo.queueFamilyIndex = graphicsIndex;
 
-    VkCommandPool commandPool;
     result = vkCreateCommandPool(device, &commandPoolCreateInfo, nullptr, &commandPool);
     printf("Create command pool: %i\n", result);
 
@@ -96,7 +108,6 @@ void initVulkan(HINSTANCE hInstance, HWND hWnd)
     commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     commandBufferAllocateInfo.commandBufferCount = 1;
 
-    VkCommandBuffer commandBuffer;
     result = vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer);
     printf("Allocate command buffers: %i\n", result);
 
@@ -136,7 +147,6 @@ void initVulkan(HINSTANCE hInstance, HWND hWnd)
     renderPassCreateInfo.dependencyCount = 1;
     renderPassCreateInfo.pDependencies = &subpassDependency;
 
-    VkRenderPass renderPass;
     result = vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &renderPass);
     printf("Create render pass: %i\n", result);
 
@@ -144,7 +154,6 @@ void initVulkan(HINSTANCE hInstance, HWND hWnd)
     vertShaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     loadShader("build/vert.spv", &vertShaderModuleCreateInfo);
 
-    VkShaderModule vertShaderModule;
     result = vkCreateShaderModule(device, &vertShaderModuleCreateInfo, nullptr, &vertShaderModule);
     printf("Create vertex shader: %i\n", result);
 
@@ -158,7 +167,6 @@ void initVulkan(HINSTANCE hInstance, HWND hWnd)
     fragShaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     loadShader("build/frag.spv", &fragShaderModuleCreateInfo);
 
-    VkShaderModule fragShaderModule;
     result = vkCreateShaderModule(device, &fragShaderModuleCreateInfo, nullptr, &fragShaderModule);
     printf("Create fragment shader: %i\n", result);
 
@@ -228,7 +236,6 @@ void initVulkan(HINSTANCE hInstance, HWND hWnd)
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{};
     pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     
-    VkPipelineLayout pipelineLayout;
     result = vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
     printf("Create pipeline layout: %i\n", result);
 
@@ -246,22 +253,14 @@ void initVulkan(HINSTANCE hInstance, HWND hWnd)
     pipelineCreateInfo.renderPass = renderPass;
     pipelineCreateInfo.subpass = 0;
 
-    VkPipeline pipeline;
     result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &pipeline);
     printf("Create pipeline: %i\n", result);
-
-    VkCommandBufferBeginInfo commandBufferBeginInfo{};
-    commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-    result = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
-    printf("Begin command buffer: %i\n", result);
 
     VkWin32SurfaceCreateInfoKHR surfaceCreateInfo{};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     surfaceCreateInfo.hinstance = hInstance;
     surfaceCreateInfo.hwnd = hWnd;
 
-    VkSurfaceKHR surface;
     result = vkCreateWin32SurfaceKHR(inst, &surfaceCreateInfo, nullptr, &surface);
     printf("Create Win32 Surface: %i\n", result);
 
@@ -304,16 +303,15 @@ void initVulkan(HINSTANCE hInstance, HWND hWnd)
     swapchainCreateInfo.clipped = VK_TRUE;
     swapchainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    VkSwapchainKHR swapchain;
     result = vkCreateSwapchainKHR(device, &swapchainCreateInfo, nullptr, &swapchain);
     printf("Create swapchain: %i\n", result);
 
     uint32_t numSwapchainImages;
     result = vkGetSwapchainImagesKHR(device, swapchain, &numSwapchainImages, nullptr);
-    std::vector<VkImage> swapchainImages(numSwapchainImages);
+    swapchainImages.resize(numSwapchainImages);
     result = vkGetSwapchainImagesKHR(device, swapchain, &numSwapchainImages, &swapchainImages[0]);
     
-    std::vector<VkFramebuffer> framebuffers(numSwapchainImages);
+    framebuffers.resize(numSwapchainImages);
     for(int i=0; i<numSwapchainImages; i++) {
         VkImageViewCreateInfo imageViewCreateInfo{};
         imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -350,13 +348,22 @@ void initVulkan(HINSTANCE hInstance, HWND hWnd)
     VkSemaphoreCreateInfo semaphoreCreateInfo{};
     semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    VkSemaphore imageAvailableSemaphore;
     result = vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &imageAvailableSemaphore);
     printf("Create semaphore: %i\n", result);
 
-    VkSemaphore renderFinishedSemaphore;
     result = vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &renderFinishedSemaphore);
     printf("Create semaphore: %i\n", result);
+}
+
+void renderFrame()
+{
+    VkCommandBufferBeginInfo commandBufferBeginInfo{};
+    commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    VkResult result;
+
+    result = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
+    printf("Begin command buffer: %i\n", result);
 
     uint32_t imageIndex;
     result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
@@ -414,6 +421,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
         case WM_DESTROY:
             PostQuitMessage(0);
             return 0;
+    
+        case WM_TIMER:
+            renderFrame();
+            SetTimer(hWnd, 1, 30, NULL);
+            return 0;
     }
 
     return DefWindowProc(hWnd, iMsg, wParam, lParam);
@@ -460,6 +472,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     UpdateWindow(hWnd);
 
     initVulkan(hInstance, hWnd);
+
+    SetTimer(hWnd, 1, 0, NULL);
 
     MSG msg;
     while(GetMessage(&msg, NULL, 0, 0) > 0) {
