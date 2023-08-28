@@ -19,6 +19,12 @@ private:
     VkCommandBuffer mCommandBuffer;
     VkCommandPool mCommandPool;
 
+    VkBuffer mUniformBuffer;
+    VkDeviceMemory mUniformDeviceMemory;
+    void *mUniformMap;
+    VkDescriptorPool mDescriptorPool;
+    VkDescriptorSet mDescriptorSet;
+
     std::unique_ptr<Device> mDevice;
     std::unique_ptr<Pipeline> mPipeline;
     std::unique_ptr<Swapchain> mSwapchain;

@@ -12,9 +12,7 @@ public:
     VkPipeline vkPipeline() { return mPipeline; }
     VkPipelineLayout vkPipelineLayout() { return mPipelineLayout; }
     VkRenderPass vkRenderPass() { return mRenderPass; }
-
-    void *uniformMap() { return mUniformMap; }
-    VkDescriptorSet vkDescriptorSet() { return mDescriptorSet; }
+    VkDescriptorSetLayout vkDescriptorSetLayout() { return mDescriptorSetLayout; }
 
 private:
     Device &mDevice;
@@ -24,12 +22,6 @@ private:
     VkDescriptorSetLayout mDescriptorSetLayout;
     VkPipelineLayout mPipelineLayout;
     VkPipeline mPipeline;
-
-    VkBuffer mUniformBuffer;
-    VkDeviceMemory mUniformDeviceMemory;
-    void *mUniformMap;
-    VkDescriptorPool mDescriptorPool;
-    VkDescriptorSet mDescriptorSet;
 };
 
 #endif

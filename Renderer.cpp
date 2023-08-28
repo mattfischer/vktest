@@ -27,11 +27,91 @@ Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
 
     result = vkAllocateCommandBuffers(mDevice->vkDevice(), &commandBufferAllocateInfo, &mCommandBuffer);
     printf("Allocate command buffers: %i\n", result);
+
+    VkDeviceSize uniformBufferSize = sizeof(uint32_t);
+
+    VkBufferCreateInfo bufferCreateInfo{};
+    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferCreateInfo.size = uniformBufferSize;
+    bufferCreateInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    result = vkCreateBuffer(mDevice->vkDevice(), &bufferCreateInfo, nullptr, &mUniformBuffer);
+    printf("Create buffer: %i\n", result);
+
+    VkMemoryRequirements memoryRequirements;
+    vkGetBufferMemoryRequirements(mDevice->vkDevice(), mUniformBuffer, &memoryRequirements);
+
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(mDevice->vkPhysicalDevice(), &memoryProperties);
+
+    int memoryTypeIndex = -1;
+    int propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    for(int i=0; i<memoryProperties.memoryTypeCount; i++) {
+        if(memoryRequirements.memoryTypeBits & (1 << i) && (memoryProperties.memoryTypes[i].propertyFlags & propertyFlags) == propertyFlags) {
+            memoryTypeIndex = i;
+            break;
+        }
+    }
+
+    printf("memory type index: %i\n", memoryTypeIndex);
+    VkMemoryAllocateInfo allocateInfo{};
+    allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocateInfo.allocationSize = uniformBufferSize;
+    allocateInfo.memoryTypeIndex = memoryTypeIndex;
+
+    result = vkAllocateMemory(mDevice->vkDevice(), &allocateInfo, nullptr, &mUniformDeviceMemory);
+    printf("Allocate memory: %i\n", result);
+
+    result = vkBindBufferMemory(mDevice->vkDevice(), mUniformBuffer, mUniformDeviceMemory, 0);
+    printf("Bind memory: %i\n", result);
+
+    result = vkMapMemory(mDevice->vkDevice(), mUniformDeviceMemory, 0, uniformBufferSize, 0, &mUniformMap);
+    printf("Map memory: %i\n", result);
+
+    VkDescriptorPoolSize descriptorPoolSize{};
+    descriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptorPoolSize.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo descriptorPoolCreateInfo{};
+    descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descriptorPoolCreateInfo.maxSets = 1;
+    descriptorPoolCreateInfo.poolSizeCount = 1;
+    descriptorPoolCreateInfo.pPoolSizes = &descriptorPoolSize;
+
+    result = vkCreateDescriptorPool(mDevice->vkDevice(), &descriptorPoolCreateInfo, nullptr, &mDescriptorPool);
+    printf("Create descriptor pool: %i\n", result);
+
+    VkDescriptorSetAllocateInfo descriptorSetAllocateInfo{};
+    descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    descriptorSetAllocateInfo.descriptorPool = mDescriptorPool;
+    descriptorSetAllocateInfo.descriptorSetCount = 1;
+    VkDescriptorSetLayout descriptorSetLayout = mPipeline->vkDescriptorSetLayout();
+    descriptorSetAllocateInfo.pSetLayouts = &descriptorSetLayout;
+
+    result = vkAllocateDescriptorSets(mDevice->vkDevice(), &descriptorSetAllocateInfo, &mDescriptorSet);
+    printf("Allocate descriptor set: %i\n", result);
+
+    VkDescriptorBufferInfo descriptorBufferInfo{};
+    descriptorBufferInfo.buffer = mUniformBuffer;
+    descriptorBufferInfo.offset = 0;
+    descriptorBufferInfo.range = uniformBufferSize;
+
+    VkWriteDescriptorSet writeDescriptorSet{};
+    writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writeDescriptorSet.dstSet = mDescriptorSet;
+    writeDescriptorSet.dstBinding = 0;
+    writeDescriptorSet.dstArrayElement = 0;
+    writeDescriptorSet.descriptorCount = 1;
+    writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    writeDescriptorSet.pBufferInfo = &descriptorBufferInfo;
+
+    vkUpdateDescriptorSets(mDevice->vkDevice(), 1, &writeDescriptorSet, 0, nullptr);
 }
 
 void Renderer::renderFrame(int frame)
 {
-    *((uint32_t*)mPipeline->uniformMap()) = frame;
+    *((uint32_t*)mUniformMap) = frame;
 
     VkCommandBufferBeginInfo commandBufferBeginInfo{};
     commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -56,8 +136,7 @@ void Renderer::renderFrame(int frame)
 
     vkCmdBeginRenderPass(mCommandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline->vkPipeline());
-    VkDescriptorSet descriptorSet = mPipeline->vkDescriptorSet();
-    vkCmdBindDescriptorSets(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline->vkPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
+    vkCmdBindDescriptorSets(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline->vkPipelineLayout(), 0, 1, &mDescriptorSet, 0, nullptr);
     vkCmdDraw(mCommandBuffer, 3, 1, 0, 0);
     vkCmdEndRenderPass(mCommandBuffer);
 
