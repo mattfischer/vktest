@@ -1,8 +1,5 @@
 #include "Renderer.hpp"
 
-static const int kWidth = 640;
-static const int kHeight = 480;
-
 Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
 {
     mDevice = std::make_unique<Device>();
@@ -130,13 +127,28 @@ void Renderer::renderFrame(int frame)
     renderPassBeginInfo.renderPass = mPipeline->vkRenderPass();
     renderPassBeginInfo.framebuffer = mSwapchain->framebuffers()[imageIndex];
     renderPassBeginInfo.renderArea.offset = {0, 0};
-    renderPassBeginInfo.renderArea.extent = {kWidth, kHeight};
+    renderPassBeginInfo.renderArea.extent = {mSwapchain->width(), mSwapchain->height()};
     renderPassBeginInfo.clearValueCount = 1;
     renderPassBeginInfo.pClearValues = &clearValue;
 
     vkCmdBeginRenderPass(mCommandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline->vkPipeline());
     vkCmdBindDescriptorSets(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline->vkPipelineLayout(), 0, 1, &mDescriptorSet, 0, nullptr);
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = mSwapchain->width();
+    viewport.height = mSwapchain->height();
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(mCommandBuffer, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = {mSwapchain->width(), mSwapchain->height()};
+    vkCmdSetScissor(mCommandBuffer, 0, 1, &scissor);
+
     vkCmdDraw(mCommandBuffer, 3, 1, 0, 0);
     vkCmdEndRenderPass(mCommandBuffer);
 

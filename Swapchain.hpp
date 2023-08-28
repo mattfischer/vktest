@@ -19,6 +19,9 @@ public:
     VkSemaphore imageAvailableSemaphore() { return mImageAvailableSemaphore; }
     VkSemaphore renderFinishedSemaphore() { return mRenderFinishedSemaphore; }
 
+    uint32_t width();
+    uint32_t height();
+
 private:
     Device &mDevice;
 

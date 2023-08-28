@@ -14,6 +14,8 @@ public:
     VkRenderPass vkRenderPass() { return mRenderPass; }
     VkDescriptorSetLayout vkDescriptorSetLayout() { return mDescriptorSetLayout; }
 
+    VkFormat format();
+
 private:
     Device &mDevice;
     VkShaderModule mVertShaderModule;

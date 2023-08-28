@@ -3,8 +3,7 @@
 #include <stdio.h>
 #include <malloc.h>
 
-static const int kWidth = 640;
-static const int kHeight = 480;
+static const VkFormat kFormat = VK_FORMAT_R8G8B8A8_SRGB;
 
 void loadShader(const char *filename, VkShaderModuleCreateInfo *createInfo)
 {
@@ -20,10 +19,8 @@ void loadShader(const char *filename, VkShaderModuleCreateInfo *createInfo)
 Pipeline::Pipeline(Device &device)
 : mDevice(device)
 {
-    VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
-
     VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = format;
+    colorAttachment.format = kFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -94,25 +91,11 @@ Pipeline::Pipeline(Device &device)
     inputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssemblyStateCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = kWidth;
-    viewport.height = kHeight;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-
-    VkRect2D scissor{};
-    scissor.offset = {0, 0};
-    scissor.extent = {kWidth, kHeight};
-
     VkPipelineViewportStateCreateInfo viewportStateCreateInfo{};
     viewportStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportStateCreateInfo.viewportCount = 1;
-    viewportStateCreateInfo.pViewports = &viewport;
     viewportStateCreateInfo.scissorCount = 1;
-    viewportStateCreateInfo.pScissors = &scissor;
-
+    
     VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo{};
     rasterizationStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizationStateCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
@@ -141,6 +124,16 @@ Pipeline::Pipeline(Device &device)
     colorBlendStateCreateInfo.logicOp = VK_LOGIC_OP_COPY;
     colorBlendStateCreateInfo.attachmentCount = 1;
     colorBlendStateCreateInfo.pAttachments = &colorBlendAttachmentState;
+
+    VkDynamicState dynamicStates[] = {
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR
+    };
+
+    VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo{};
+    dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicStateCreateInfo.dynamicStateCount = 2;
+    dynamicStateCreateInfo.pDynamicStates = dynamicStates;
 
     VkDescriptorSetLayoutBinding uniformBinding{};
     uniformBinding.binding = 0;
@@ -174,10 +167,16 @@ Pipeline::Pipeline(Device &device)
     pipelineCreateInfo.pRasterizationState = &rasterizationStateCreateInfo;
     pipelineCreateInfo.pMultisampleState = &multisampleStateCreateInfo;
     pipelineCreateInfo.pColorBlendState = &colorBlendStateCreateInfo;
+    pipelineCreateInfo.pDynamicState = &dynamicStateCreateInfo;
     pipelineCreateInfo.layout = mPipelineLayout;
     pipelineCreateInfo.renderPass = mRenderPass;
     pipelineCreateInfo.subpass = 0;
 
     result = vkCreateGraphicsPipelines(mDevice.vkDevice(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &mPipeline);
     printf("Create pipeline: %i\n", result);
+}
+
+VkFormat Pipeline::format()
+{
+    return kFormat;
 }

@@ -6,8 +6,6 @@ static const int kHeight = 480;
 Swapchain::Swapchain(Device &device, Pipeline &pipeline, HINSTANCE hInstance, HWND hWnd)
 : mDevice(device)
 {
-    VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
-
     VkWin32SurfaceCreateInfoKHR surfaceCreateInfo{};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     surfaceCreateInfo.hinstance = hInstance;
@@ -43,7 +41,7 @@ Swapchain::Swapchain(Device &device, Pipeline &pipeline, HINSTANCE hInstance, HW
     swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchainCreateInfo.surface = mSurface;
     swapchainCreateInfo.minImageCount = surfaceCapabilities.minImageCount + 1;
-    swapchainCreateInfo.imageFormat = format;
+    swapchainCreateInfo.imageFormat = pipeline.format();
     swapchainCreateInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
     swapchainCreateInfo.imageExtent = {kWidth, kHeight};
     swapchainCreateInfo.imageArrayLayers = 1;
@@ -69,7 +67,7 @@ Swapchain::Swapchain(Device &device, Pipeline &pipeline, HINSTANCE hInstance, HW
         imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
         imageViewCreateInfo.image = mSwapchainImages[i];
-        imageViewCreateInfo.format = format;
+        imageViewCreateInfo.format = pipeline.format();
         imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
         imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -105,4 +103,14 @@ Swapchain::Swapchain(Device &device, Pipeline &pipeline, HINSTANCE hInstance, HW
 
     result = vkCreateSemaphore(mDevice.vkDevice(), &semaphoreCreateInfo, nullptr, &mRenderFinishedSemaphore);
     printf("Create semaphore: %i\n", result);
+}
+
+uint32_t Swapchain::width()
+{
+    return kWidth;
+}
+
+uint32_t Swapchain::height()
+{
+    return kHeight;
 }
