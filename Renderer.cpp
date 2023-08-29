@@ -32,7 +32,7 @@ Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
     result = vkAllocateCommandBuffers(mDevice->vkDevice(), &commandBufferAllocateInfo, &mCommandBuffer);
     printf("Allocate command buffers: %i\n", result);
 
-    VkDeviceSize uniformBufferSize = sizeof(uint32_t);
+    VkDeviceSize uniformBufferSize = sizeof(Uniform);
 
     VkBufferCreateInfo bufferCreateInfo{};
     bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -154,7 +154,15 @@ Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
 
 void Renderer::renderFrame(int frame)
 {
-    *((uint32_t*)mUniformMap) = frame;
+    Uniform *uniform = (Uniform*)mUniformMap;
+    float theta = 2 * 3.14 * frame / 50;
+    float sinTheta = sinf(theta);
+    float cosTheta = cosf(theta);
+
+    float *t = uniform->transformation;
+    t[0] = cosTheta; t[1] = -sinTheta; t[2]  = 0.0f; t[3]  = 0.0f;
+    t[4] = sinTheta; t[5] =  cosTheta; t[6]  = 0.0f; t[7]  = 0.0f;
+    t[8] = 0.0f;     t[9] =  0.0f;     t[10] = 1.0f; t[11] = 0.0f;
 
     VkCommandBufferBeginInfo commandBufferBeginInfo{};
     commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;

@@ -15,6 +15,10 @@ public:
 
     void renderFrame(int frame);
 
+    struct Uniform {
+        float transformation[12];
+    };
+
 private:
     VkCommandBuffer mCommandBuffer;
     VkCommandPool mCommandPool;
