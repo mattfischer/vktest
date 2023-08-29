@@ -1,10 +1,11 @@
 #include "Renderer.hpp"
 
-static const int kNumVertices = 3;
+static const int kNumVertices = 4;
 static const Pipeline::Vertex vertices[] = {
-    { 0.0f, -0.577f, 0.0f, 1.0f, 0.0f, 0.0f },
-    { 0.5f,  0.289f, 0.0f, 0.0f, 1.0f, 0.0f },
-    { -0.5f, 0.289f, 0.0f, 0.0f, 0.0f, 1.0f }
+    { -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f },
+    { -0.5f,  0.5f, 0.0f, 0.0f, 1.0f, 0.0f },
+    {  0.5f,  0.5f, 0.0f, 0.0f, 0.0f, 1.0f },
+    {  0.5f, -0.5f, 0.0f, 1.0f, 1.0f, 0.0f }
 };
 
 Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
@@ -169,7 +170,7 @@ Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
 void Renderer::renderFrame(int frame)
 {
     Uniform *uniform = (Uniform*)mUniformMap;
-    float theta = 2 * 3.14 * frame / 50;
+    float theta = 2 * 3.14 * frame / 100;
     float sinTheta = sinf(theta);
     float cosTheta = cosf(theta);
 
@@ -227,7 +228,7 @@ void Renderer::renderFrame(int frame)
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, vertexBuffers, offsets);
 
-    vkCmdDraw(mCommandBuffer, 3, 1, 0, 0);
+    vkCmdDraw(mCommandBuffer, 4, 1, 0, 0);
     vkCmdEndRenderPass(mCommandBuffer);
 
     result = vkEndCommandBuffer(mCommandBuffer);
