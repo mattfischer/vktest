@@ -36,7 +36,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     setbuf(stdout, NULL);
 
     WNDCLASSEX wndClass;
-    const char *szClassName = "vktest";
+    const TCHAR *szClassName = TEXT("vktest");
 
     wndClass.cbSize=sizeof(WNDCLASSEX);
     wndClass.style=(UINT)NULL;
@@ -56,7 +56,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     HWND hWnd = CreateWindowEx(
         (DWORD)NULL,
         szClassName,
-        "Vulkan Test",
+        TEXT("Vulkan Test"),
         WS_VISIBLE | WS_POPUPWINDOW | WS_CAPTION,
         0,
         0,
