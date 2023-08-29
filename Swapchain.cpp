@@ -1,7 +1,7 @@
 #include "Swapchain.hpp"
 
 static const int kWidth = 640;
-static const int kHeight = 480;
+static const int kHeight = 640;
 
 Swapchain::Swapchain(Device &device, Pipeline &pipeline, HINSTANCE hInstance, HWND hWnd)
 : mDevice(device)

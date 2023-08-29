@@ -11,7 +11,7 @@
 std::unique_ptr<Renderer> sRenderer;
 
 static const int kWidth = 640;
-static const int kHeight = 480;
+static const int kHeight = 640;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 {

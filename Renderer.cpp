@@ -2,9 +2,9 @@
 
 static const int kNumVertices = 3;
 static const Pipeline::Vertex vertices[] = {
-    { 0.0f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f },
-    { 0.5f,  0.5f, 0.0f, 0.0f, 1.0f, 0.0f },
-    { -0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f }
+    { 0.0f, -0.577f, 0.0f, 1.0f, 0.0f, 0.0f },
+    { 0.5f,  0.289f, 0.0f, 0.0f, 1.0f, 0.0f },
+    { -0.5f, 0.289f, 0.0f, 0.0f, 0.0f, 1.0f }
 };
 
 Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
