@@ -11,11 +11,11 @@ public:
     VkDevice vkDevice() { return mDevice; }
     VkPhysicalDevice vkPhysicalDevice() { return mPhysicalDevice; }
     VkQueue vkQueue() { return mQueue; }
-    int graphicsIndex() { return mGraphicsIndex; }
+    uint32_t graphicsIndex() { return mGraphicsIndex; }
 
 private:
     VkInstance mInst;
-    int32_t mGraphicsIndex;
+    uint32_t mGraphicsIndex;
     VkPhysicalDevice mPhysicalDevice;
     VkDevice mDevice;
     VkQueue mQueue;

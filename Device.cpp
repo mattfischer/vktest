@@ -11,10 +11,11 @@ Device::Device()
         "VK_KHR_win32_surface"
     };
 
-    VkInstanceCreateInfo instCreateInfo{};
-    instCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    instCreateInfo.enabledExtensionCount = 2;
-    instCreateInfo.ppEnabledExtensionNames = instExtensions;
+    VkInstanceCreateInfo instCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        .enabledExtensionCount = 2,
+        .ppEnabledExtensionNames = instExtensions
+    };
 
     VkResult result;
     result = vkCreateInstance(&instCreateInfo, nullptr, &mInst);
@@ -30,29 +31,31 @@ Device::Device()
     std::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyPropertyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(mPhysicalDevice, &queueFamilyPropertyCount, &queueFamilyProperties[0]);
     
-    for(int32_t i=0; i<queueFamilyPropertyCount; i++) {
+    for(uint32_t i=0; i<queueFamilyPropertyCount; i++) {
         if(queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             mGraphicsIndex = i;
         }
     }
 
-    VkDeviceQueueCreateInfo queueCreateInfo{};
-    queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateInfo.queueFamilyIndex = mGraphicsIndex;
-    queueCreateInfo.queueCount = 1;
     float queuePriority = 1.0f;
-    queueCreateInfo.pQueuePriorities = &queuePriority;
+    VkDeviceQueueCreateInfo queueCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        .queueFamilyIndex = mGraphicsIndex,
+        .queueCount = 1,
+        .pQueuePriorities = &queuePriority
+    };
 
     const char *deviceExtensions[] = {
         "VK_KHR_swapchain"
     };
 
-    VkDeviceCreateInfo deviceCreateInfo{};
-    deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    deviceCreateInfo.queueCreateInfoCount = 1;
-    deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
-    deviceCreateInfo.enabledExtensionCount = 1;
-    deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions;
+    VkDeviceCreateInfo deviceCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .queueCreateInfoCount = 1,
+        .pQueueCreateInfos = &queueCreateInfo,
+        .enabledExtensionCount = 1,
+        .ppEnabledExtensionNames = deviceExtensions
+    };
 
     result = vkCreateDevice(mPhysicalDevice, &deviceCreateInfo, nullptr, &mDevice);
     printf("Create device: %i\n", result);

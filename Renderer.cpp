@@ -15,32 +15,35 @@ Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
 
     VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
 
-    VkCommandPoolCreateInfo commandPoolCreateInfo{};
-    commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    commandPoolCreateInfo.queueFamilyIndex = mDevice->graphicsIndex();
+    VkCommandPoolCreateInfo commandPoolCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = mDevice->graphicsIndex()
+    };
 
     VkResult result = vkCreateCommandPool(mDevice->vkDevice(), &commandPoolCreateInfo, nullptr, &mCommandPool);
     printf("Create command pool: %i\n", result);
 
-    VkCommandBufferAllocateInfo commandBufferAllocateInfo{};
-    commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    commandBufferAllocateInfo.commandPool = mCommandPool;
-    commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    commandBufferAllocateInfo.commandBufferCount = 1;
+    VkCommandBufferAllocateInfo commandBufferAllocateInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = mCommandPool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1
+    };
 
     result = vkAllocateCommandBuffers(mDevice->vkDevice(), &commandBufferAllocateInfo, &mCommandBuffer);
     printf("Allocate command buffers: %i\n", result);
 
     VkDeviceSize uniformBufferSize = sizeof(Uniform);
 
-    VkBufferCreateInfo bufferCreateInfo{};
-    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferCreateInfo.size = uniformBufferSize;
-    bufferCreateInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkBufferCreateInfo uniformBufferCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = uniformBufferSize,
+        .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
+    };
 
-    result = vkCreateBuffer(mDevice->vkDevice(), &bufferCreateInfo, nullptr, &mUniformBuffer);
+    result = vkCreateBuffer(mDevice->vkDevice(), &uniformBufferCreateInfo, nullptr, &mUniformBuffer);
     printf("Create buffer: %i\n", result);
 
     VkMemoryRequirements memoryRequirements;
@@ -49,7 +52,7 @@ Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
     VkPhysicalDeviceMemoryProperties memoryProperties;
     vkGetPhysicalDeviceMemoryProperties(mDevice->vkPhysicalDevice(), &memoryProperties);
 
-    int memoryTypeIndex = -1;
+    uint32_t memoryTypeIndex = -1;
     int propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     for(int i=0; i<memoryProperties.memoryTypeCount; i++) {
         if(memoryRequirements.memoryTypeBits & (1 << i) && (memoryProperties.memoryTypes[i].propertyFlags & propertyFlags) == propertyFlags) {
@@ -59,12 +62,13 @@ Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
     }
 
     printf("memory type index: %i\n", memoryTypeIndex);
-    VkMemoryAllocateInfo allocateInfo{};
-    allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocateInfo.allocationSize = uniformBufferSize;
-    allocateInfo.memoryTypeIndex = memoryTypeIndex;
+    VkMemoryAllocateInfo uniformAllocateInfo = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = uniformBufferSize,
+        .memoryTypeIndex = memoryTypeIndex
+    };
 
-    result = vkAllocateMemory(mDevice->vkDevice(), &allocateInfo, nullptr, &mUniformDeviceMemory);
+    result = vkAllocateMemory(mDevice->vkDevice(), &uniformAllocateInfo, nullptr, &mUniformDeviceMemory);
     printf("Allocate memory: %i\n", result);
 
     result = vkBindBufferMemory(mDevice->vkDevice(), mUniformBuffer, mUniformDeviceMemory, 0);
@@ -73,52 +77,60 @@ Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
     result = vkMapMemory(mDevice->vkDevice(), mUniformDeviceMemory, 0, uniformBufferSize, 0, &mUniformMap);
     printf("Map memory: %i\n", result);
 
-    VkDescriptorPoolSize descriptorPoolSize{};
-    descriptorPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descriptorPoolSize.descriptorCount = 1;
+    VkDescriptorPoolSize descriptorPoolSize = {
+        .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorCount = 1
+    };
 
-    VkDescriptorPoolCreateInfo descriptorPoolCreateInfo{};
-    descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    descriptorPoolCreateInfo.maxSets = 1;
-    descriptorPoolCreateInfo.poolSizeCount = 1;
-    descriptorPoolCreateInfo.pPoolSizes = &descriptorPoolSize;
+    VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .maxSets = 1,
+        .poolSizeCount = 1,
+        .pPoolSizes = &descriptorPoolSize
+    };
 
     result = vkCreateDescriptorPool(mDevice->vkDevice(), &descriptorPoolCreateInfo, nullptr, &mDescriptorPool);
     printf("Create descriptor pool: %i\n", result);
 
-    VkDescriptorSetAllocateInfo descriptorSetAllocateInfo{};
-    descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    descriptorSetAllocateInfo.descriptorPool = mDescriptorPool;
-    descriptorSetAllocateInfo.descriptorSetCount = 1;
     VkDescriptorSetLayout descriptorSetLayout = mPipeline->vkDescriptorSetLayout();
-    descriptorSetAllocateInfo.pSetLayouts = &descriptorSetLayout;
+    VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .descriptorPool = mDescriptorPool,
+        .descriptorSetCount = 1,
+        .pSetLayouts = &descriptorSetLayout
+    };
 
     result = vkAllocateDescriptorSets(mDevice->vkDevice(), &descriptorSetAllocateInfo, &mDescriptorSet);
     printf("Allocate descriptor set: %i\n", result);
 
-    VkDescriptorBufferInfo descriptorBufferInfo{};
-    descriptorBufferInfo.buffer = mUniformBuffer;
-    descriptorBufferInfo.offset = 0;
-    descriptorBufferInfo.range = uniformBufferSize;
+    VkDescriptorBufferInfo descriptorBufferInfo = {
+        .buffer = mUniformBuffer,
+        .offset = 0,
+        .range = uniformBufferSize
+    };
 
-    VkWriteDescriptorSet writeDescriptorSet{};
-    writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeDescriptorSet.dstSet = mDescriptorSet;
-    writeDescriptorSet.dstBinding = 0;
-    writeDescriptorSet.dstArrayElement = 0;
-    writeDescriptorSet.descriptorCount = 1;
-    writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    writeDescriptorSet.pBufferInfo = &descriptorBufferInfo;
+    VkWriteDescriptorSet writeDescriptorSet = {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = mDescriptorSet,
+        .dstBinding = 0,
+        .dstArrayElement = 0,
+        .descriptorCount = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .pBufferInfo = &descriptorBufferInfo
+    };
 
     vkUpdateDescriptorSets(mDevice->vkDevice(), 1, &writeDescriptorSet, 0, nullptr);
 
-    int vertexBufferSize = sizeof(Pipeline::Vertex) * kNumVertices;
-    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferCreateInfo.size = vertexBufferSize;
-    bufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkDeviceSize vertexBufferSize = sizeof(Pipeline::Vertex) * kNumVertices;
 
-    result = vkCreateBuffer(mDevice->vkDevice(), &bufferCreateInfo, nullptr, &mVertexBuffer);
+    VkBufferCreateInfo vertexBufferCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = vertexBufferSize,
+        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
+    };
+
+    result = vkCreateBuffer(mDevice->vkDevice(), &vertexBufferCreateInfo, nullptr, &mVertexBuffer);
     printf("Create buffer: %i\n", result);
 
     vkGetBufferMemoryRequirements(mDevice->vkDevice(), mVertexBuffer, &memoryRequirements);
@@ -133,11 +145,13 @@ Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
     }
 
     printf("memory type index: %i\n", memoryTypeIndex);
-    allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocateInfo.allocationSize = vertexBufferSize;
-    allocateInfo.memoryTypeIndex = memoryTypeIndex;
+    VkMemoryAllocateInfo vertexAllocateInfo = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = vertexBufferSize,
+        .memoryTypeIndex = memoryTypeIndex
+    };
 
-    result = vkAllocateMemory(mDevice->vkDevice(), &allocateInfo, nullptr, &mVertexDeviceMemory);
+    result = vkAllocateMemory(mDevice->vkDevice(), &vertexAllocateInfo, nullptr, &mVertexDeviceMemory);
     printf("Allocate memory: %i\n", result);
 
     result = vkBindBufferMemory(mDevice->vkDevice(), mVertexBuffer, mVertexDeviceMemory, 0);
@@ -176,31 +190,37 @@ void Renderer::renderFrame(int frame)
 
     VkClearValue clearValue{{{0.0f, 0.0f, 0.0f, 1.0f}}};
     
-    VkRenderPassBeginInfo renderPassBeginInfo{};
-    renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassBeginInfo.renderPass = mPipeline->vkRenderPass();
-    renderPassBeginInfo.framebuffer = mSwapchain->framebuffers()[imageIndex];
-    renderPassBeginInfo.renderArea.offset = {0, 0};
-    renderPassBeginInfo.renderArea.extent = {mSwapchain->width(), mSwapchain->height()};
-    renderPassBeginInfo.clearValueCount = 1;
-    renderPassBeginInfo.pClearValues = &clearValue;
+    VkRenderPassBeginInfo renderPassBeginInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        .renderPass = mPipeline->vkRenderPass(),
+        .framebuffer = mSwapchain->framebuffers()[imageIndex],
+        .renderArea = {
+            .offset = { 0, 0 },
+            .extent = { mSwapchain->width(), mSwapchain->height() },
+        },
+        .clearValueCount = 1,
+        .pClearValues = &clearValue
+    };
 
     vkCmdBeginRenderPass(mCommandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline->vkPipeline());
     vkCmdBindDescriptorSets(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline->vkPipelineLayout(), 0, 1, &mDescriptorSet, 0, nullptr);
 
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = mSwapchain->width();
-    viewport.height = mSwapchain->height();
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
+    VkViewport viewport = {
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = (float)mSwapchain->width(),
+        .height = (float)mSwapchain->height(),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f
+    };
+
     vkCmdSetViewport(mCommandBuffer, 0, 1, &viewport);
 
-    VkRect2D scissor{};
-    scissor.offset = {0, 0};
-    scissor.extent = {mSwapchain->width(), mSwapchain->height()};
+    VkRect2D scissor = {
+        .offset = { 0, 0 },
+        .extent = { mSwapchain->width(), mSwapchain->height() }
+    };
     vkCmdSetScissor(mCommandBuffer, 0, 1, &scissor);
 
     VkBuffer vertexBuffers[] = { mVertexBuffer };
@@ -212,29 +232,32 @@ void Renderer::renderFrame(int frame)
 
     result = vkEndCommandBuffer(mCommandBuffer);
 
-    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.waitSemaphoreCount = 1;
+    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     VkSemaphore imageAvailableSemaphore = mSwapchain->imageAvailableSemaphore();
-    submitInfo.pWaitSemaphores = &imageAvailableSemaphore;
-    submitInfo.pWaitDstStageMask = waitStages;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &mCommandBuffer;
-    submitInfo.signalSemaphoreCount = 1;
     VkSemaphore renderFinishedSemaphore = mSwapchain->renderFinishedSemaphore();
-    submitInfo.pSignalSemaphores = &renderFinishedSemaphore;
+
+    VkSubmitInfo submitInfo = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &imageAvailableSemaphore,
+        .pWaitDstStageMask = waitStages,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &mCommandBuffer,
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores = &renderFinishedSemaphore
+    };
+
     result = vkQueueSubmit(mDevice->vkQueue(), 1, &submitInfo, VK_NULL_HANDLE);
 
-    VkPresentInfoKHR presentInfo{};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &renderFinishedSemaphore;
-    presentInfo.swapchainCount = 1;
     VkSwapchainKHR swapchain = mSwapchain->vkSwapchain();
-    presentInfo.pSwapchains = &swapchain;
-    presentInfo.pImageIndices = &imageIndex;
-    
+    VkPresentInfoKHR presentInfo = {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &renderFinishedSemaphore,
+        .swapchainCount = 1,
+        .pSwapchains = &swapchain,
+        .pImageIndices = &imageIndex
+    };
+
     result = vkQueuePresentKHR(mDevice->vkQueue(), &presentInfo);
 }
