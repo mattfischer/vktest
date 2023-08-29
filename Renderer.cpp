@@ -1,5 +1,12 @@
 #include "Renderer.hpp"
 
+static const int kNumVertices = 3;
+static const Pipeline::Vertex vertices[] = {
+    { 0.0f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f },
+    { 0.5f,  0.5f, 0.0f, 0.0f, 1.0f, 0.0f },
+    { -0.5f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f }
+};
+
 Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
 {
     mDevice = std::make_unique<Device>();
@@ -104,6 +111,45 @@ Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
     writeDescriptorSet.pBufferInfo = &descriptorBufferInfo;
 
     vkUpdateDescriptorSets(mDevice->vkDevice(), 1, &writeDescriptorSet, 0, nullptr);
+
+    int vertexBufferSize = sizeof(Pipeline::Vertex) * kNumVertices;
+    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferCreateInfo.size = vertexBufferSize;
+    bufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    result = vkCreateBuffer(mDevice->vkDevice(), &bufferCreateInfo, nullptr, &mVertexBuffer);
+    printf("Create buffer: %i\n", result);
+
+    vkGetBufferMemoryRequirements(mDevice->vkDevice(), mVertexBuffer, &memoryRequirements);
+
+    memoryTypeIndex = -1;
+    propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    for(int i=0; i<memoryProperties.memoryTypeCount; i++) {
+        if(memoryRequirements.memoryTypeBits & (1 << i) && (memoryProperties.memoryTypes[i].propertyFlags & propertyFlags) == propertyFlags) {
+            memoryTypeIndex = i;
+            break;
+        }
+    }
+
+    printf("memory type index: %i\n", memoryTypeIndex);
+    allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocateInfo.allocationSize = vertexBufferSize;
+    allocateInfo.memoryTypeIndex = memoryTypeIndex;
+
+    result = vkAllocateMemory(mDevice->vkDevice(), &allocateInfo, nullptr, &mVertexDeviceMemory);
+    printf("Allocate memory: %i\n", result);
+
+    result = vkBindBufferMemory(mDevice->vkDevice(), mVertexBuffer, mVertexDeviceMemory, 0);
+    printf("Bind memory: %i\n", result);
+
+    void *vertexMap;
+    result = vkMapMemory(mDevice->vkDevice(), mVertexDeviceMemory, 0, vertexBufferSize, 0, &vertexMap);
+    printf("Map memory: %i\n", result);
+
+    memcpy(vertexMap, vertices, vertexBufferSize);
+
+    vkUnmapMemory(mDevice->vkDevice(), mVertexDeviceMemory);
 }
 
 void Renderer::renderFrame(int frame)
@@ -148,6 +194,10 @@ void Renderer::renderFrame(int frame)
     scissor.offset = {0, 0};
     scissor.extent = {mSwapchain->width(), mSwapchain->height()};
     vkCmdSetScissor(mCommandBuffer, 0, 1, &scissor);
+
+    VkBuffer vertexBuffers[] = { mVertexBuffer };
+    VkDeviceSize offsets[] = { 0 };
+    vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, vertexBuffers, offsets);
 
     vkCmdDraw(mCommandBuffer, 3, 1, 0, 0);
     vkCmdEndRenderPass(mCommandBuffer);

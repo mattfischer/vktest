@@ -3,6 +3,8 @@ project(VkTest)
 
 find_package(Vulkan REQUIRED)
 
+set (CMAKE_CXX_STANDARD 20)
+
 add_executable(vktest WIN32 vktest.cpp Device.cpp Pipeline.cpp Swapchain.cpp Renderer.cpp)
 target_include_directories(vktest PUBLIC ${Vulkan_INCLUDE_DIR})
 target_link_libraries(vktest ${Vulkan_LIBRARY})

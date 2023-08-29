@@ -25,6 +25,9 @@ private:
     VkDescriptorPool mDescriptorPool;
     VkDescriptorSet mDescriptorSet;
 
+    VkBuffer mVertexBuffer;
+    VkDeviceMemory mVertexDeviceMemory;
+
     std::unique_ptr<Device> mDevice;
     std::unique_ptr<Pipeline> mPipeline;
     std::unique_ptr<Swapchain> mSwapchain;
