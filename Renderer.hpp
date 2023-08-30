@@ -21,6 +21,7 @@ public:
 
 private:
     void allocateBuffer(VkDeviceSize size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlagBits propertyFlags, VkBuffer *buffer, VkDeviceMemory *deviceMemory);
+    uint32_t findMemoryTypeIndex(VkMemoryRequirements memoryRequirements, VkMemoryPropertyFlagBits propertyFlags);
 
     VkCommandBuffer mCommandBuffer;
     VkCommandPool mCommandPool;
@@ -33,6 +34,11 @@ private:
 
     VkBuffer mVertexBuffer;
     VkDeviceMemory mVertexDeviceMemory;
+
+    VkImage mTextureImage;
+    VkDeviceMemory mTextureMemory;
+    VkImageView mTextureImageView;
+    VkSampler mSampler;
 
     std::unique_ptr<Device> mDevice;
     std::unique_ptr<Pipeline> mPipeline;

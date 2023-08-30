@@ -110,6 +110,12 @@ Pipeline::Pipeline(Device &device)
             .binding = 0,
             .format = VK_FORMAT_R32G32B32_SFLOAT,
             .offset = offsetof(Vertex, color)
+        },
+        {
+            .location = 2,
+            .binding = 0,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(Vertex, tex)
         }
     };        
 
@@ -117,7 +123,7 @@ Pipeline::Pipeline(Device &device)
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .vertexBindingDescriptionCount = 1,
         .pVertexBindingDescriptions = &bindingDescription,
-        .vertexAttributeDescriptionCount = 2,
+        .vertexAttributeDescriptionCount = 3,
         .pVertexAttributeDescriptions = attributeDescriptions
     };
 
@@ -176,17 +182,25 @@ Pipeline::Pipeline(Device &device)
         .pDynamicStates = dynamicStates
     };
 
-    VkDescriptorSetLayoutBinding uniformBinding = {
-        .binding = 0,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+    VkDescriptorSetLayoutBinding bindings[] = {
+        {
+            .binding = 0,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+        },
+        {
+            .binding = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+        }
     };
 
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .bindingCount = 1,
-        .pBindings = &uniformBinding
+        .bindingCount = 2,
+        .pBindings = bindings
     };
 
     result = vkCreateDescriptorSetLayout(mDevice.vkDevice(), &descriptorSetLayoutCreateInfo, nullptr, &mDescriptorSetLayout);
