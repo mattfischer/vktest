@@ -20,6 +20,8 @@ public:
     };
 
 private:
+    void allocateBuffer(VkDeviceSize size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlagBits propertyFlags, VkBuffer *buffer, VkDeviceMemory *deviceMemory);
+
     VkCommandBuffer mCommandBuffer;
     VkCommandPool mCommandPool;
 

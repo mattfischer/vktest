@@ -37,43 +37,8 @@ Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
 
     VkDeviceSize uniformBufferSize = sizeof(Uniform);
 
-    VkBufferCreateInfo uniformBufferCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = uniformBufferSize,
-        .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
-    };
-
-    result = vkCreateBuffer(mDevice->vkDevice(), &uniformBufferCreateInfo, nullptr, &mUniformBuffer);
-    printf("Create buffer: %i\n", result);
-
-    VkMemoryRequirements memoryRequirements;
-    vkGetBufferMemoryRequirements(mDevice->vkDevice(), mUniformBuffer, &memoryRequirements);
-
-    VkPhysicalDeviceMemoryProperties memoryProperties;
-    vkGetPhysicalDeviceMemoryProperties(mDevice->vkPhysicalDevice(), &memoryProperties);
-
-    uint32_t memoryTypeIndex = -1;
-    int propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    for(int i=0; i<memoryProperties.memoryTypeCount; i++) {
-        if(memoryRequirements.memoryTypeBits & (1 << i) && (memoryProperties.memoryTypes[i].propertyFlags & propertyFlags) == propertyFlags) {
-            memoryTypeIndex = i;
-            break;
-        }
-    }
-
-    printf("memory type index: %i\n", memoryTypeIndex);
-    VkMemoryAllocateInfo uniformAllocateInfo = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = uniformBufferSize,
-        .memoryTypeIndex = memoryTypeIndex
-    };
-
-    result = vkAllocateMemory(mDevice->vkDevice(), &uniformAllocateInfo, nullptr, &mUniformDeviceMemory);
-    printf("Allocate memory: %i\n", result);
-
-    result = vkBindBufferMemory(mDevice->vkDevice(), mUniformBuffer, mUniformDeviceMemory, 0);
-    printf("Bind memory: %i\n", result);
+    VkMemoryPropertyFlagBits propertyFlags = (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    allocateBuffer(uniformBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, propertyFlags, &mUniformBuffer, &mUniformDeviceMemory);
 
     result = vkMapMemory(mDevice->vkDevice(), mUniformDeviceMemory, 0, uniformBufferSize, 0, &mUniformMap);
     printf("Map memory: %i\n", result);
@@ -123,40 +88,7 @@ Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
     vkUpdateDescriptorSets(mDevice->vkDevice(), 1, &writeDescriptorSet, 0, nullptr);
 
     VkDeviceSize vertexBufferSize = sizeof(Pipeline::Vertex) * kNumVertices;
-
-    VkBufferCreateInfo vertexBufferCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = vertexBufferSize,
-        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
-    };
-
-    result = vkCreateBuffer(mDevice->vkDevice(), &vertexBufferCreateInfo, nullptr, &mVertexBuffer);
-    printf("Create buffer: %i\n", result);
-
-    vkGetBufferMemoryRequirements(mDevice->vkDevice(), mVertexBuffer, &memoryRequirements);
-
-    memoryTypeIndex = -1;
-    propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    for(int i=0; i<memoryProperties.memoryTypeCount; i++) {
-        if(memoryRequirements.memoryTypeBits & (1 << i) && (memoryProperties.memoryTypes[i].propertyFlags & propertyFlags) == propertyFlags) {
-            memoryTypeIndex = i;
-            break;
-        }
-    }
-
-    printf("memory type index: %i\n", memoryTypeIndex);
-    VkMemoryAllocateInfo vertexAllocateInfo = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = vertexBufferSize,
-        .memoryTypeIndex = memoryTypeIndex
-    };
-
-    result = vkAllocateMemory(mDevice->vkDevice(), &vertexAllocateInfo, nullptr, &mVertexDeviceMemory);
-    printf("Allocate memory: %i\n", result);
-
-    result = vkBindBufferMemory(mDevice->vkDevice(), mVertexBuffer, mVertexDeviceMemory, 0);
-    printf("Bind memory: %i\n", result);
+    allocateBuffer(vertexBufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, propertyFlags, &mVertexBuffer, &mVertexDeviceMemory);
 
     void *vertexMap;
     result = vkMapMemory(mDevice->vkDevice(), mVertexDeviceMemory, 0, vertexBufferSize, 0, &vertexMap);
@@ -261,4 +193,44 @@ void Renderer::renderFrame(int frame)
     };
 
     result = vkQueuePresentKHR(mDevice->vkQueue(), &presentInfo);
+}
+
+void Renderer::allocateBuffer(VkDeviceSize size, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlagBits propertyFlags, VkBuffer *buffer, VkDeviceMemory *deviceMemory)
+{
+    VkBufferCreateInfo bufferCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = size,
+        .usage = usageFlags,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
+    };
+
+    VkResult result = vkCreateBuffer(mDevice->vkDevice(), &bufferCreateInfo, nullptr, buffer);
+    printf("Create buffer: %i\n", result);
+
+    VkMemoryRequirements memoryRequirements;
+    vkGetBufferMemoryRequirements(mDevice->vkDevice(), *buffer, &memoryRequirements);
+
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(mDevice->vkPhysicalDevice(), &memoryProperties);
+
+    uint32_t memoryTypeIndex = UINT32_MAX;
+    for(uint32_t i=0; i<memoryProperties.memoryTypeCount; i++) {
+        if(memoryRequirements.memoryTypeBits & (1 << i) && (memoryProperties.memoryTypes[i].propertyFlags & propertyFlags) == propertyFlags) {
+            memoryTypeIndex = i;
+            break;
+        }
+    }
+
+    printf("memory type index: %i\n", memoryTypeIndex);
+    VkMemoryAllocateInfo allocateInfo = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = size,
+        .memoryTypeIndex = memoryTypeIndex
+    };
+
+    result = vkAllocateMemory(mDevice->vkDevice(), &allocateInfo, nullptr, deviceMemory);
+    printf("Allocate memory: %i\n", result);
+
+    result = vkBindBufferMemory(mDevice->vkDevice(), *buffer, *deviceMemory, 0);
+    printf("Bind memory: %i\n", result);
 }
