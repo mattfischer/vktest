@@ -12,7 +12,6 @@ Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
 {
     mDevice = std::make_unique<Device>();
     mPipeline = std::make_unique<Pipeline>(*mDevice);
-    mSwapchain = std::make_unique<Swapchain>(*mDevice, *mPipeline, hInstance, hWnd);
 
     VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
 
@@ -326,6 +325,54 @@ Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
     memcpy(vertexMap, vertices, vertexBufferSize);
 
     vkUnmapMemory(mDevice->vkDevice(), mVertexDeviceMemory);
+
+    VkImageCreateInfo depthCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_D32_SFLOAT,
+        .extent = {640, 640},
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
+    };
+    result = vkCreateImage(mDevice->vkDevice(), &depthCreateInfo, nullptr, &mDepthImage);
+    printf("Create image: %i\n", result);
+
+    vkGetImageMemoryRequirements(mDevice->vkDevice(), mDepthImage, &memoryRequirements);
+
+    memoryTypeIndex = findMemoryTypeIndex(memoryRequirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    VkMemoryAllocateInfo depthAllocInfo = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memoryRequirements.size,
+        .memoryTypeIndex = memoryTypeIndex
+    };
+
+    result = vkAllocateMemory(mDevice->vkDevice(), &depthAllocInfo, nullptr, &mDepthMemory);
+    printf("Allocate memory: %i\n", result);
+
+    vkBindImageMemory(mDevice->vkDevice(), mDepthImage, mDepthMemory, 0);
+
+    VkImageViewCreateInfo depthViewCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = mDepthImage,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = VK_FORMAT_D32_SFLOAT,
+        .subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1
+        }
+    };
+    result = vkCreateImageView(mDevice->vkDevice(), &depthViewCreateInfo, nullptr, &mDepthView);
+    printf("Create image view: %i\n", result);
+
+    mSwapchain = std::make_unique<Swapchain>(*mDevice, *mPipeline, mDepthView, hInstance, hWnd);
 }
 
 void Renderer::renderFrame(int frame)
@@ -350,7 +397,15 @@ void Renderer::renderFrame(int frame)
     uint32_t imageIndex;
     result = vkAcquireNextImageKHR(mDevice->vkDevice(), mSwapchain->vkSwapchain(), UINT64_MAX, mSwapchain->imageAvailableSemaphore(), VK_NULL_HANDLE, &imageIndex);
 
-    VkClearValue clearValue{{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    VkClearValue clearValues[] = 
+    {
+        {
+            .color = {0.0f, 0.0f, 0.0f, 1.0f}
+        },
+        {
+            .depthStencil = {1.0f, 0}
+        }
+    };
     
     VkRenderPassBeginInfo renderPassBeginInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -360,8 +415,8 @@ void Renderer::renderFrame(int frame)
             .offset = { 0, 0 },
             .extent = { mSwapchain->width(), mSwapchain->height() },
         },
-        .clearValueCount = 1,
-        .pClearValues = &clearValue
+        .clearValueCount = 2,
+        .pClearValues = clearValues
     };
 
     vkCmdBeginRenderPass(mCommandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);

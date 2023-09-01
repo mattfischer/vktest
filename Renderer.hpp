@@ -40,6 +40,10 @@ private:
     VkImageView mTextureImageView;
     VkSampler mSampler;
 
+    VkImage mDepthImage;
+    VkDeviceMemory mDepthMemory;
+    VkImageView mDepthView;
+
     std::unique_ptr<Device> mDevice;
     std::unique_ptr<Pipeline> mPipeline;
     std::unique_ptr<Swapchain> mSwapchain;

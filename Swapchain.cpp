@@ -3,7 +3,7 @@
 static const int kWidth = 640;
 static const int kHeight = 640;
 
-Swapchain::Swapchain(Device &device, Pipeline &pipeline, HINSTANCE hInstance, HWND hWnd)
+Swapchain::Swapchain(Device &device, Pipeline &pipeline, VkImageView depthView, HINSTANCE hInstance, HWND hWnd)
 : mDevice(device)
 {
     VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {
@@ -89,11 +89,16 @@ Swapchain::Swapchain(Device &device, Pipeline &pipeline, HINSTANCE hInstance, HW
         result = vkCreateImageView(mDevice.vkDevice(), &imageViewCreateInfo, nullptr, &imageView);
         printf("Create image view: %i (%i)\n", result, i);
 
+        VkImageView attachments[] = {
+            imageView,
+            depthView
+        };
+
         VkFramebufferCreateInfo framebufferCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
             .renderPass = pipeline.vkRenderPass(),
-            .attachmentCount = 1,
-            .pAttachments = &imageView,
+            .attachmentCount = 2,
+            .pAttachments = attachments,
             .width = kWidth,
             .height = kHeight,
             .layers = 1

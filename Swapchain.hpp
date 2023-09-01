@@ -12,7 +12,7 @@
 
 class Swapchain {
 public:
-    Swapchain(Device &device, Pipeline &pipeline, HINSTANCE hInstance, HWND hWnd);
+    Swapchain(Device &device, Pipeline &pipeline, VkImageView depthView, HINSTANCE hInstance, HWND hWnd);
 
     VkSwapchainKHR vkSwapchain() { return mSwapchain; }
     std::vector<VkFramebuffer> &framebuffers() { return mFramebuffers; }
