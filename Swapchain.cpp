@@ -3,7 +3,7 @@
 static const int kWidth = 640;
 static const int kHeight = 640;
 
-Swapchain::Swapchain(Device &device, Pipeline &pipeline, VkImageView depthView, HINSTANCE hInstance, HWND hWnd)
+Swapchain::Swapchain(Device &device, VkFormat format, HINSTANCE hInstance, HWND hWnd)
 : mDevice(device)
 {
     VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {
@@ -42,7 +42,7 @@ Swapchain::Swapchain(Device &device, Pipeline &pipeline, VkImageView depthView, 
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = mSurface,
         .minImageCount = surfaceCapabilities.minImageCount + 1,
-        .imageFormat = pipeline.format(),
+        .imageFormat = format,
         .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
         .imageExtent = {kWidth, kHeight},
         .imageArrayLayers = 1,
@@ -63,13 +63,13 @@ Swapchain::Swapchain(Device &device, Pipeline &pipeline, VkImageView depthView, 
     mSwapchainImages.resize(numSwapchainImages);
     result = vkGetSwapchainImagesKHR(mDevice.vkDevice(), mSwapchain, &numSwapchainImages, &mSwapchainImages[0]);
     
-    mFramebuffers.resize(numSwapchainImages);
+    mSwapchainImageViews.resize(numSwapchainImages);
     for(int i=0; i<numSwapchainImages; i++) {
         VkImageViewCreateInfo imageViewCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = mSwapchainImages[i],
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = pipeline.format(),
+            .format = format,
             .components = { 
                 VK_COMPONENT_SWIZZLE_IDENTITY,
                 VK_COMPONENT_SWIZZLE_IDENTITY,
@@ -85,27 +85,8 @@ Swapchain::Swapchain(Device &device, Pipeline &pipeline, VkImageView depthView, 
             }
         };
 
-        VkImageView imageView;
-        result = vkCreateImageView(mDevice.vkDevice(), &imageViewCreateInfo, nullptr, &imageView);
+        result = vkCreateImageView(mDevice.vkDevice(), &imageViewCreateInfo, nullptr, &mSwapchainImageViews[i]);
         printf("Create image view: %i (%i)\n", result, i);
-
-        VkImageView attachments[] = {
-            imageView,
-            depthView
-        };
-
-        VkFramebufferCreateInfo framebufferCreateInfo = {
-            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-            .renderPass = pipeline.vkRenderPass(),
-            .attachmentCount = 2,
-            .pAttachments = attachments,
-            .width = kWidth,
-            .height = kHeight,
-            .layers = 1
-        };
-
-        result = vkCreateFramebuffer(mDevice.vkDevice(), &framebufferCreateInfo, nullptr, &mFramebuffers[i]);
-        printf("Create framebuffer: %i (%i)\n", result, i);
     }
 
     VkSemaphoreCreateInfo semaphoreCreateInfo{};

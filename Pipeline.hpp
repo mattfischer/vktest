@@ -11,7 +11,6 @@ public:
 
     VkPipeline vkPipeline() { return mPipeline; }
     VkPipelineLayout vkPipelineLayout() { return mPipelineLayout; }
-    VkRenderPass vkRenderPass() { return mRenderPass; }
     VkDescriptorSetLayout vkDescriptorSetLayout() { return mDescriptorSetLayout; }
 
     VkFormat format();
@@ -26,7 +25,6 @@ private:
     Device &mDevice;
     VkShaderModule mVertShaderModule;
     VkShaderModule mFragShaderModule;
-    VkRenderPass mRenderPass;
     VkDescriptorSetLayout mDescriptorSetLayout;
     VkPipelineLayout mPipelineLayout;
     VkPipeline mPipeline;

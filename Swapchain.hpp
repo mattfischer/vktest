@@ -12,10 +12,11 @@
 
 class Swapchain {
 public:
-    Swapchain(Device &device, Pipeline &pipeline, VkImageView depthView, HINSTANCE hInstance, HWND hWnd);
+    Swapchain(Device &device, VkFormat format, HINSTANCE hInstance, HWND hWnd);
 
     VkSwapchainKHR vkSwapchain() { return mSwapchain; }
-    std::vector<VkFramebuffer> &framebuffers() { return mFramebuffers; }
+    std::vector<VkImage> &images() { return mSwapchainImages; }
+    std::vector<VkImageView> &imageViews() { return mSwapchainImageViews; }
     VkSemaphore imageAvailableSemaphore() { return mImageAvailableSemaphore; }
     VkSemaphore renderFinishedSemaphore() { return mRenderFinishedSemaphore; }
 
@@ -30,7 +31,7 @@ private:
     VkSemaphore mImageAvailableSemaphore;
     VkSemaphore mRenderFinishedSemaphore;
     std::vector<VkImage> mSwapchainImages;
-    std::vector<VkFramebuffer> mFramebuffers;
+    std::vector<VkImageView> mSwapchainImageViews;
 };
 
 #endif

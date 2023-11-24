@@ -19,72 +19,12 @@ void loadShader(const char *filename, VkShaderModuleCreateInfo *createInfo)
 Pipeline::Pipeline(Device &device)
 : mDevice(device)
 {
-    VkAttachmentDescription attachments[] = {
-        {
-            .format = kFormat,
-            .samples = VK_SAMPLE_COUNT_1_BIT,
-            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-        },
-        {
-            .format = VK_FORMAT_D32_SFLOAT,
-            .samples = VK_SAMPLE_COUNT_1_BIT,
-            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-            .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-        }
-    };
-
-    VkAttachmentReference colorAttachmentRef = {
-        .attachment = 0,
-        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-    };
-
-    VkAttachmentReference depthAttachmentRef = {
-        .attachment = 1,
-        .layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL
-    };
-
-    VkSubpassDescription subpassDescription = {
-        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-        .colorAttachmentCount = 1,
-        .pColorAttachments = &colorAttachmentRef,
-        .pDepthStencilAttachment = &depthAttachmentRef
-    };
-
-    VkSubpassDependency subpassDependency = {
-        .srcSubpass = VK_SUBPASS_EXTERNAL,
-        .dstSubpass = 0,
-        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-        .srcAccessMask = 0,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
-    };
-
-    VkRenderPassCreateInfo renderPassCreateInfo = {
-        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-        .attachmentCount = 2,
-        .pAttachments = attachments,
-        .subpassCount = 1,
-        .pSubpasses = &subpassDescription,
-        .dependencyCount = 1,
-        .pDependencies = &subpassDependency
-    };
-
-    VkResult result = vkCreateRenderPass(mDevice.vkDevice(), &renderPassCreateInfo, nullptr, &mRenderPass);
-    printf("Create render pass: %i\n", result);
-
     VkShaderModuleCreateInfo vertShaderModuleCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO
     };
     loadShader("build/vert.spv", &vertShaderModuleCreateInfo);
 
-    result = vkCreateShaderModule(mDevice.vkDevice(), &vertShaderModuleCreateInfo, nullptr, &mVertShaderModule);
+    VkResult result = vkCreateShaderModule(mDevice.vkDevice(), &vertShaderModuleCreateInfo, nullptr, &mVertShaderModule);
     printf("Create vertex shader: %i\n", result);
 
     VkShaderModuleCreateInfo fragShaderModuleCreateInfo = {
@@ -246,8 +186,16 @@ Pipeline::Pipeline(Device &device)
     result = vkCreatePipelineLayout(mDevice.vkDevice(), &pipelineLayoutCreateInfo, nullptr, &mPipelineLayout);
     printf("Create pipeline layout: %i\n", result);
 
+    VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+        .colorAttachmentCount = 1,
+        .pColorAttachmentFormats = &kFormat,
+        .depthAttachmentFormat = VK_FORMAT_D32_SFLOAT
+    };
+
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext = &pipelineRenderingCreateInfo,
         .stageCount = 2,
         .pStages = shaderStages,
         .pVertexInputState = &vertexInputStateCreateInfo,
@@ -259,7 +207,6 @@ Pipeline::Pipeline(Device &device)
         .pColorBlendState = &colorBlendStateCreateInfo,
         .pDynamicState = &dynamicStateCreateInfo,
         .layout = mPipelineLayout,
-        .renderPass = mRenderPass,
         .subpass = 0
     };
 

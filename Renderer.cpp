@@ -12,8 +12,7 @@ Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
 {
     mDevice = std::make_unique<Device>();
     mPipeline = std::make_unique<Pipeline>(*mDevice);
-
-    VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
+    mSwapchain = std::make_unique<Swapchain>(*mDevice, mPipeline->format(), hInstance, hWnd);
 
     VkCommandPoolCreateInfo commandPoolCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -371,8 +370,6 @@ Renderer::Renderer(HINSTANCE hInstance, HWND hWnd)
     };
     result = vkCreateImageView(mDevice->vkDevice(), &depthViewCreateInfo, nullptr, &mDepthView);
     printf("Create image view: %i\n", result);
-
-    mSwapchain = std::make_unique<Swapchain>(*mDevice, *mPipeline, mDepthView, hInstance, hWnd);
 }
 
 void Renderer::renderFrame(int frame)
@@ -397,29 +394,66 @@ void Renderer::renderFrame(int frame)
     uint32_t imageIndex;
     result = vkAcquireNextImageKHR(mDevice->vkDevice(), mSwapchain->vkSwapchain(), UINT64_MAX, mSwapchain->imageAvailableSemaphore(), VK_NULL_HANDLE, &imageIndex);
 
-    VkClearValue clearValues[] = 
-    {
-        {
-            .color = {0.0f, 0.0f, 0.0f, 1.0f}
+    VkImageMemoryBarrier2 barrier = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+        .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .image = mSwapchain->images()[imageIndex],
+        .subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1
         },
-        {
+    };
+
+    VkDependencyInfo barrierDependency = {
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &barrier
+    };
+    vkCmdPipelineBarrier2(mCommandBuffer, &barrierDependency);
+
+    VkRenderingAttachmentInfo colorAttachment = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = mSwapchain->imageViews()[imageIndex],
+        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .clearValue = {
+            .color = {0.0f, 0.0f, 0.0f, 1.0f}
+        }  
+    };
+
+    VkRenderingAttachmentInfo depthAttachment = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = mDepthView,
+        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .clearValue = {
             .depthStencil = {1.0f, 0}
         }
     };
-    
-    VkRenderPassBeginInfo renderPassBeginInfo = {
-        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-        .renderPass = mPipeline->vkRenderPass(),
-        .framebuffer = mSwapchain->framebuffers()[imageIndex],
+
+    VkRenderingInfo renderingInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
         .renderArea = {
             .offset = { 0, 0 },
             .extent = { mSwapchain->width(), mSwapchain->height() },
         },
-        .clearValueCount = 2,
-        .pClearValues = clearValues
+        .layerCount = 1,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &colorAttachment,
+        .pDepthAttachment = &depthAttachment,
     };
 
-    vkCmdBeginRenderPass(mCommandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRendering(mCommandBuffer, &renderingInfo);
     vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline->vkPipeline());
     vkCmdBindDescriptorSets(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline->vkPipelineLayout(), 0, 1, &mDescriptorSet, 0, nullptr);
 
@@ -445,7 +479,31 @@ void Renderer::renderFrame(int frame)
     vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, vertexBuffers, offsets);
 
     vkCmdDraw(mCommandBuffer, 4, 1, 0, 0);
-    vkCmdEndRenderPass(mCommandBuffer);
+    vkCmdEndRendering(mCommandBuffer);
+
+    VkImageMemoryBarrier2 barrier2 = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        .image = mSwapchain->images()[imageIndex],
+        .subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1
+        },
+    };
+
+    VkDependencyInfo barrierDependency2 = {
+        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+        .imageMemoryBarrierCount = 1,
+        .pImageMemoryBarriers = &barrier2
+    };
+    vkCmdPipelineBarrier2(mCommandBuffer, &barrierDependency2);
 
     result = vkEndCommandBuffer(mCommandBuffer);
 
